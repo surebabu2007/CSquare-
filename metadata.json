@@ -1,0 +1,7 @@
+{
+  "name": "CSR2 Comic Creator",
+  "description": "Upload an image and generate an authentic, interactive comic book themed around the CSR Racing 2 universe. Customize your story, edit panels with text prompts, and even talk to characters in real-time.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
