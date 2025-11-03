@@ -1,15 +1,11 @@
 import React, { useState, useRef } from 'react';
-import type { StoryPreferences, ComicHistoryItem } from '../types';
+import type { StoryPreferences } from '../types';
 import { motion } from 'framer-motion';
 import { UploadCloudIcon, AlertCircle, X } from './icons';
-import HistoryBrowser from './HistoryBrowser';
 
 interface LandingPageProps {
   onCreateComic: (preferences: StoryPreferences, imageFiles: File[]) => void;
   error: string | null;
-  history: ComicHistoryItem[];
-  onLoadComic: (id: string) => void;
-  onDeleteComic: (id: string) => void;
 }
 
 const moods: StoryPreferences['mood'][] = ['Gritty & Intense', 'High-Octane Action', 'Dramatic & Emotional', 'Sleek & Stylish'];
@@ -45,7 +41,7 @@ const artStyles: string[] = [
   'Dark Fantasy Oil Painting'
 ];
 
-function LandingPage({ onCreateComic, error, history, onLoadComic, onDeleteComic }: LandingPageProps) {
+function LandingPage({ onCreateComic, error }: LandingPageProps) {
   const [preferences, setPreferences] = useState<Omit<StoryPreferences, 'storyDescription'>>({
     mood: 'Gritty & Intense',
     storyType: 'Rivalry',
@@ -85,6 +81,7 @@ function LandingPage({ onCreateComic, error, history, onLoadComic, onDeleteComic
   function removeImage(index: number) {
     setImageFiles(files => files.filter((_, i) => i !== index));
     setImagePreviews(previews => previews.filter((_, i) => i !== index));
+    setLocalError(null);
   }
   
   function handleSubmit(e: React.FormEvent) {
@@ -93,29 +90,30 @@ function LandingPage({ onCreateComic, error, history, onLoadComic, onDeleteComic
       setLocalError('Please upload at least one image for your main character.');
       return;
     }
-    setLocalError(null);
+    if (localError) return;
     onCreateComic({ ...preferences, storyDescription }, imageFiles);
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-csr-dark" style={{backgroundImage: `radial-gradient(circle at center, rgba(42, 42, 42, 0.5) 0%, #101010 70%)`}}>
+    <div className="min-h-full flex flex-col items-center justify-center p-4 bg-csr-dark" style={{backgroundImage: `radial-gradient(circle at center, rgba(42, 42, 42, 0.5) 0%, #101010 70%)`}}>
       <motion.div 
         className="text-center animate-text-focus-in pt-16"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
-        <h1 className="text-5xl md:text-7xl font-black uppercase text-white tracking-wider">
-          CSR2 <span className="text-csr-red">Comic</span> Creator
+        <h1 className="text-5xl md:text-7xl font-black uppercase text-white tracking-wider flex items-center justify-center gap-4 flex-wrap">
+          <span>CSR2 <span className="text-csr-red">Comic</span> Creator</span>
+          <span className="text-2xl md:text-3xl font-bold bg-yellow-400 text-black px-3 py-1 rounded-md transform -rotate-6">BETA</span>
         </h1>
         <p className="mt-4 text-lg text-csr-light-gray max-w-2xl mx-auto">
-          Upload your photos, describe your story, and become a street racing legend in a 15-page comic epic.
+          Upload your photos, describe your story, and become a street racing legend in a 15-panel comic epic.
         </p>
       </motion.div>
 
       <motion.form 
         onSubmit={handleSubmit} 
-        className="mt-10 w-full max-w-6xl bg-csr-gray bg-opacity-50 backdrop-blur-sm p-8 rounded-lg border border-csr-light-gray/20 shadow-2xl animate-scale-up-center"
+        className="mt-10 mb-10 w-full max-w-6xl bg-csr-gray bg-opacity-50 backdrop-blur-sm p-8 rounded-lg border border-csr-light-gray/20 shadow-2xl animate-scale-up-center"
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5, delay: 0.5 }}
@@ -187,19 +185,11 @@ function LandingPage({ onCreateComic, error, history, onLoadComic, onDeleteComic
         )}
 
         <div className="mt-8 text-center">
-            <button type="submit" className="text-white bg-csr-red hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-900 font-bold rounded-lg text-lg px-12 py-3.5 text-center transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed" disabled={imageFiles.length === 0}>
-                CREATE MY 15-PAGE COMIC
+            <button type="submit" className="text-white bg-csr-red hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-900 font-bold rounded-lg text-lg px-12 py-3.5 text-center transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed" disabled={imageFiles.length === 0 || !!localError}>
+                CREATE MY 15-PANEL COMIC
             </button>
         </div>
       </motion.form>
-
-      {history.length > 0 && (
-          <HistoryBrowser 
-            history={history}
-            onLoad={onLoadComic}
-            onDelete={onDeleteComic}
-          />
-      )}
     </div>
   );
 }

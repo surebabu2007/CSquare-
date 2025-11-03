@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-// FIX: Removed the import for 'LiveSession' as it is not an exported member of the '@google/genai' package.
+// FIX: The 'LiveSession' type is not exported from the '@google/genai' package.
+// It has been removed from imports and 'any' is used for the session promise ref.
 import { GoogleGenAI, LiveServerMessage, Modality, Blob } from '@google/genai';
 import { encode, decode, decodeAudioData } from '../utils/audioUtils';
 
@@ -10,7 +11,6 @@ export function useLiveChat(character: string) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState<{ user: string, model: string }[]>([]);
   
-  // FIX: Replaced the 'LiveSession' type with 'any' because 'LiveSession' is not exported from the '@google/genai' package.
   const sessionPromiseRef = useRef<Promise<any> | null>(null);
   const inputAudioContextRef = useRef<AudioContext | null>(null);
   const outputAudioContextRef = useRef<AudioContext | null>(null);
@@ -182,7 +182,7 @@ export function useLiveChat(character: string) {
     return () => {
         stopChat();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable--next-line react-hooks/exhaustive-deps
   }, []);
 
   return { startChat, stopChat, isConnected, isSpeaking, isProcessing, transcript };

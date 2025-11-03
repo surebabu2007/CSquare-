@@ -30,7 +30,7 @@ const comicStorySchema = {
           },
           image_prompt: {
             type: Type.STRING,
-            description: "CRITICAL: A hyper-detailed prompt for an image generator. It MUST begin with the consistent, detailed description of the main character derived from the user's images. It MUST specify the user's chosen art style. The prompt should describe a dynamic scene fitting the CSR Racing 2 aesthetic, including cars and settings for a square (1:1) image."
+            description: "CRITICAL: An extremely detailed image generation prompt. It MUST begin with the unchanging, detailed description of the main character derived from user images. It MUST be overwhelmingly saturated with the user's chosen art style, influencing lighting, color, and mood. Describes a dynamic scene fitting the CSR Racing 2 world for a square (1:1) image."
           },
           dialogue: {
             type: Type.STRING,
@@ -44,12 +44,12 @@ const comicStorySchema = {
               type: Type.STRING,
               description: "A short hint for the frontend layout of this panel. Examples: 'full-width', 'half-width-left', 'small-inset', 'tall-vertical'."
           },
-          voice_suggestion: {
-              type: Type.STRING,
-              description: "A brief description of the character's vocal tone for text-to-speech. Examples: 'Deep, gravelly male voice', 'Calm, authoritative female narrator', 'Young, energetic rival'."
+          preferred_model: {
+            type: Type.STRING,
+            description: "The ideal image generation model for this specific panel. Use 'nano_banana' for panels where the main character is clearly visible and consistency is paramount. Use 'imagen_4' for high-detail establishing shots, scenery, close-ups on objects, or where the character is small/unimportant in the frame."
           }
         },
-        required: ['panel', 'image_prompt', 'dialogue', 'character_name', 'panel_layout_description', 'voice_suggestion']
+        required: ['panel', 'image_prompt', 'dialogue', 'character_name', 'panel_layout_description', 'preferred_model']
       }
     }
   },
@@ -59,9 +59,7 @@ const comicStorySchema = {
 export async function generateComicStory(preferences: StoryPreferences, userImages: ImagePart[]): Promise<ComicStoryResponse> {
   const model = 'gemini-2.5-pro';
   const prompt = `
-    You are an expert comic book creator and screenwriter, deeply immersed in the gritty, high-octane world of CSR Racing 2. Your mission is to generate a complete 15-panel comic story based on user-provided images and preferences, drawing heavily from the official lore and aesthetic of the CSR2 universe.
-
-    **REFERENCE LORE:** Your primary source of inspiration for tone, factions, characters, and events should be the world described on the official CSR Racing 2 website (csr-racing.com). Mention specific crews (like Shax Industries, Gold Rushers), events, and the general vibe of high-stakes underground racing.
+    You are a world-class comic book creator and screenwriter, a master of visual storytelling, specializing in the high-octane world of CSR Racing 2. Your task is to generate a complete 15-panel comic story from user images and preferences. You must follow the instructions below with absolute precision.
 
     **USER PREFERENCES:**
     - Mood: ${preferences.mood}
@@ -69,22 +67,31 @@ export async function generateComicStory(preferences: StoryPreferences, userImag
     - Art Style: ${preferences.artStyle}
     - Custom Story Goal: ${preferences.storyDescription || 'A classic racing tale of a newcomer rising through the ranks.'}
 
-    **CRITICAL INSTRUCTIONS:**
-    1.  **Character Analysis (HIGHEST PRIORITY):** Your first and most critical task is to ensure character consistency. Meticulously analyze the user-uploaded images to create a detailed "character sheet" for the protagonist. This sheet should include facial structure, hair style and color, ethnicity, typical expression, and clothing style. The character in every single panel MUST look IDENTICAL to the person in these images.
+    **CRITICAL INSTRUCTION 1: UNWAVERING CHARACTER CONSISTENCY (ABSOLUTE HIGHEST PRIORITY)**
+    - **Analyze and Define:** Before doing anything else, you MUST meticulously analyze the user-uploaded images. Create a highly detailed, internal "character sheet" for the protagonist. This includes, but is not limited to: facial structure, jawline, eye shape and color, hair style and color, skin tone, ethnicity, estimated age, typical expression, body build, and specific clothing style.
+    - **Mandatory Prefix:** EVERY SINGLE 'image_prompt' you generate MUST start with this exact, consistent character description. This is a non-negotiable rule. Do not deviate. The character must be instantly recognizable as the same person in every single panel.
+    - **Example of a good prefix:** "A [age] year-old [ethnicity] man with [hair style/color], a [jawline shape] jawline, [eye description], wearing a [clothing description]..."
+    - **Consequence:** Failure to maintain perfect visual consistency of the protagonist across all 15 panels is a total failure of the task.
 
-    2.  **Maintain Consistency:** For EVERY 'image_prompt' you generate, you MUST begin with the detailed character description from your character sheet. This is non-negotiable for visual consistency. Example: "A man in his late 20s with short, black hair, a sharp jawline, wearing a worn leather jacket, is seen..."
+    **CRITICAL INSTRUCTION 2: DOMINANT ART STYLE INFLUENCE**
+    - **Style is Law:** The user's chosen Art Style, "${preferences.artStyle}", is not a suggestion—it is an absolute directive that must dominate the visual identity of every panel and the cover.
+    - **Deconstruct and Apply:** Internally deconstruct the chosen art style into its core visual elements (e.g., for 'Gritty Noir', this means high-contrast black and white, deep shadows, dramatic lighting, film grain). Then, explicitly apply these elements in your 'image_prompt' descriptions.
+    - **Total Immersion:** The art style must influence everything: the color palette, lighting, line work, texture, composition, and the overall mood. The final output must look like it was hand-drawn by an artist who ONLY works in that specific style.
 
-    3.  **Art Style & Logos:** Every 'image_prompt' MUST strongly adhere to the user's chosen art style: "${preferences.artStyle}". Also, subtly integrate logos and iconography from CSR2 factions where appropriate. Describe them textually, e.g., "...a shipping container in the background is tagged with the spray-painted logo of the 'Los Vagos' crew."
+    **CRITICAL INSTRUCTION 3: INTELLIGENT MODEL SELECTION**
+    - **Analyze Panel Content:** For each panel, determine its primary visual focus.
+    - **Assign Model:** Based on the focus, set the 'preferred_model' field.
+      - If the panel is a close-up or medium shot where the main character's face/body is clearly visible and recognizable, set 'preferred_model' to 'nano_banana'. This model excels at maintaining character consistency.
+      - If the panel is an establishing shot, a landscape, a close-up of an object (like a car engine or a trophy), or a scene where the character is distant or obscured, set 'preferred_model' to 'imagen_4'. This model provides superior detail for non-character-focused visuals.
+    - **Coherence:** Both models must be guided by the same character description prefix and art style directives to ensure a cohesive final comic.
 
-    4.  **Voice & Dialogue:** For each character (including the Narrator), provide a 'voice_suggestion'. This should be a brief description of their vocal tone (e.g., "Deep, gravelly male voice," "Calm, authoritative female narrator," "Young, energetic rival"). The dialogue itself must be concise, punchy, organic, and authentic to street racing culture.
+    **STORY & STRUCTURE:**
+    - **CSR2 Universe:** The story must feel authentic to the CSR Racing 2 world. Reference its lore, factions (e.g., Shax Industries, Gold Rushers), and high-stakes racing culture.
+    - **15-Panel Arc:** Craft a complete story over EXACTLY 15 panels. It must have a clear beginning, a rising action, a climax, and a resolution.
+    - **Dynamic Cover:** The 'cover_page_prompt' must be for a dynamic, portrait-aspect-ratio (9:16) comic cover. It must feature the generated title, the consistent main character prominently, and be a perfect embodiment of the chosen Art Style and Mood.
 
-    5.  **Story Arc & Pacing:** Craft a compelling and complete story over EXACTLY 15 panels. The story must have a clear beginning, middle, and a definitive end, maintaining a consistent narrative thread and natural flow from one panel to the next.
-
-    6. **Cover Page:** Generate a single, powerful 'cover_page_prompt'. This prompt should be for a dynamic portrait-aspect-ratio (9:16) comic book cover that includes the generated title, features the main character prominently, and perfectly captures the selected Art Style and Mood.
-
-    7.  **WHAT TO AVOID (Negative Prompts):** Actively prevent common visual glitches. Do not merge characters with objects (e.g., a steering wheel is held, not fused to hands). Avoid distorted faces, extra limbs, or nonsensical backgrounds. The final image must be clean, coherent, and believable.
-
-    8.  **Output Format:** Generate a single JSON object that strictly adheres to the provided schema. Do not output anything else.
+    **OUTPUT FORMAT:**
+    - Generate a single, clean JSON object that strictly adheres to the provided schema. Do not output any text, apologies, or explanations before or after the JSON.
   `;
 
   const contents = {
@@ -116,39 +123,73 @@ export async function generateComicStory(preferences: StoryPreferences, userImag
   }
 }
 
-export async function generatePanelImage(prompt: string): Promise<string> {
-    const response = await ai.models.generateImages({
-        model: 'imagen-4.0-generate-001',
-        prompt: prompt,
+export async function generatePanelImage(prompt: string, modelHint?: 'nano_banana' | 'imagen_4'): Promise<string> {
+    // Use Imagen 4 for high-detail scenery or object shots
+    if (modelHint === 'imagen_4') {
+        const response = await ai.models.generateImages({
+            model: 'imagen-4.0-generate-001',
+            prompt: prompt,
+            config: {
+              numberOfImages: 1,
+              outputMimeType: 'image/png',
+              aspectRatio: '1:1', // Panels are square
+            },
+        });
+
+        if (response.generatedImages && response.generatedImages.length > 0 && response.generatedImages[0].image?.imageBytes) {
+            return response.generatedImages[0].image.imageBytes;
+        }
+        
+        if (!response.generatedImages || response.generatedImages.length === 0) {
+            throw new Error("Panel image generation with Imagen 4 was blocked or failed, possibly for safety reasons.");
+        }
+        
+        throw new Error("Panel image generation with Imagen 4 failed or returned no data.");
+    }
+    
+    // Default to Nano Banana (gemini-2.5-flash-image) for character consistency
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: {
+            parts: [{ text: prompt }],
+        },
         config: {
-          numberOfImages: 1,
-          outputMimeType: 'image/png',
-          aspectRatio: '1:1',
+            responseModalities: [Modality.IMAGE],
         },
     });
-
-    const base64ImageBytes = response.generatedImages[0].image.imageBytes;
-    if (base64ImageBytes) {
-        return base64ImageBytes;
+    
+    for (const part of response.candidates?.[0]?.content?.parts ?? []) {
+        if (part.inlineData?.data) {
+            return part.inlineData.data;
+        }
     }
-
-    throw new Error("Image generation failed or returned no data.");
+    
+    if (response.candidates?.[0]?.finishReason === 'SAFETY') {
+        throw new Error("Panel image generation was blocked for safety reasons. Please try a different story prompt.");
+    }
+    
+    throw new Error("Panel image generation failed or returned no data.");
 }
 
 export async function generateCoverImage(prompt: string): Promise<string> {
+    // Using Imagen 4 for the highest quality cover image.
     const response = await ai.models.generateImages({
         model: 'imagen-4.0-generate-001',
-        prompt: prompt,
+        prompt: prompt, // The prompt from the story generator is already highly detailed.
         config: {
           numberOfImages: 1,
           outputMimeType: 'image/png',
-          aspectRatio: '9:16',
+          aspectRatio: '9:16', // Enforce the portrait aspect ratio for a cover.
         },
     });
 
-    const base64ImageBytes = response.generatedImages[0].image.imageBytes;
-    if (base64ImageBytes) {
-        return base64ImageBytes;
+    if (response.generatedImages && response.generatedImages.length > 0 && response.generatedImages[0].image?.imageBytes) {
+        return response.generatedImages[0].image.imageBytes;
+    }
+    
+    // Check for safety or other generation failures.
+    if (!response.generatedImages || response.generatedImages.length === 0) {
+        throw new Error("Cover image generation was blocked or failed, possibly for safety reasons. Please try a different story prompt.");
     }
 
     throw new Error("Cover image generation failed or returned no data.");
@@ -170,57 +211,15 @@ export async function editImage(baseImage: ImagePart, prompt: string): Promise<s
         },
     });
 
-    const firstPart = response.candidates?.[0]?.content?.parts?.[0];
-    if (firstPart?.inlineData?.data) {
-        return firstPart.inlineData.data;
+    for (const part of response.candidates?.[0]?.content?.parts ?? []) {
+        if (part.inlineData?.data) {
+            return part.inlineData.data;
+        }
+    }
+
+    if (response.candidates?.[0]?.finishReason === 'SAFETY') {
+        throw new Error("Image editing was blocked for safety reasons. Please try a different prompt.");
     }
 
     throw new Error("Image editing failed or returned no data.");
-}
-
-// A simple mapping from descriptive terms to available voice names
-const voiceMap: { [key: string]: string } = {
-  'male': 'Kore',
-  'female': 'Puck', // Note: API voice names are not strictly gendered.
-  'narrator': 'Charon',
-  'deep': 'Fenrir',
-  'energetic': 'Zephyr',
-  'default': 'Kore',
-};
-
-function getVoiceName(suggestion: string): string {
-  const lowerSuggestion = suggestion.toLowerCase();
-  for (const key in voiceMap) {
-    if (lowerSuggestion.includes(key)) {
-      return voiceMap[key];
-    }
-  }
-  return voiceMap['default'];
-}
-
-export async function generateSpeech(text: string, voiceSuggestion: string): Promise<string> {
-  const model = "gemini-2.5-flash-preview-tts";
-  const voiceName = getVoiceName(voiceSuggestion);
-
-  const ttsPrompt = `Speak this line with appropriate emotion based on the text: "${text}"`;
-
-  const response = await ai.models.generateContent({
-    model,
-    contents: [{ parts: [{ text: ttsPrompt }] }],
-    config: {
-      responseModalities: [Modality.AUDIO],
-      speechConfig: {
-        voiceConfig: {
-          prebuiltVoiceConfig: { voiceName },
-        },
-      },
-    },
-  });
-
-  const audioPart = response.candidates?.[0]?.content?.parts?.[0];
-  if (audioPart?.inlineData?.data) {
-    return audioPart.inlineData.data;
-  }
-
-  throw new Error("Text-to-speech generation failed.");
 }

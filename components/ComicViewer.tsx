@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import type { ComicPanelData } from '../types';
-import type { AudioState } from '../App';
 import { AnimatePresence, motion } from 'framer-motion';
 import ComicPage from './ComicPage';
 import ImageEditorModal from './ImageEditorModal';
-import ChatModal from './ChatModal';
 import FrameAdjusterModal from './FrameAdjusterModal';
 import { Download, RefreshCw, FileArchive, BookOpen } from './icons';
 
@@ -13,6 +12,10 @@ declare global {
   interface Window {
     html2canvas: any;
     JSZip: any;
+    // FIX: Aligned the type of `lucide` with other global declarations to resolve TypeScript errors.
+    lucide?: {
+      createIcons: () => void;
+    };
   }
 }
 
@@ -22,9 +25,9 @@ interface ComicViewerProps {
   panels: ComicPanelData[];
   onReset: () => void;
   onUpdatePanelImage: (panelId: number, newImage: string) => void;
-  onUpdatePanelTransform: (panelId: number, newTransform: { x: number; y: number; scale: number }) => void;
-  onPlayAudio: (panelId: number, text: string, voiceSuggestion: string) => void;
-  audioState: AudioState;
+  onUpdatePanelTransform: (panelId: number, newTransform: { x: number; y: number; scale: number; rotation: number }) => void;
+  onRetry: (panelId: number) => void;
+  isGenerating?: boolean;
 }
 
 // Helper to group panels into pages for a better layout
@@ -40,15 +43,20 @@ function groupPanelsIntoPages(panels: ComicPanelData[]): ComicPanelData[][] {
 }
 
 
-function ComicViewer({ title, coverImage, panels, onReset, onUpdatePanelImage, onUpdatePanelTransform, onPlayAudio, audioState }: ComicViewerProps) {
+function ComicViewer({ title, coverImage, panels, onReset, onUpdatePanelImage, onUpdatePanelTransform, onRetry, isGenerating }: ComicViewerProps) {
   const [editingPanel, setEditingPanel] = useState<ComicPanelData | null>(null);
   const [adjustingPanel, setAdjustingPanel] = useState<ComicPanelData | null>(null);
-  const [chattingCharacter, setChattingCharacter] = useState<string | null>(null);
   const [downloadState, setDownloadState] = useState<'idle' | 'page' | 'frames'>('idle');
   const [showCover, setShowCover] = useState(false);
 
+  useEffect(() => {
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+  });
+
   const pages = groupPanelsIntoPages(panels);
-  const isDownloading = downloadState !== 'idle';
+  const isActionDisabled = downloadState !== 'idle' || isGenerating;
 
   const handleDownloadPage = async () => {
     setDownloadState('page');
@@ -82,7 +90,9 @@ function ComicViewer({ title, coverImage, panels, onReset, onUpdatePanelImage, o
     try {
       const zip = new window.JSZip();
       panels.forEach(panel => {
-        zip.file(`panel_${panel.id}.png`, panel.image, { base64: true });
+        if (panel.imageState === 'loaded') {
+          zip.file(`panel_${panel.id}.png`, panel.image, { base64: true });
+        }
       });
       const blob = await zip.generateAsync({ type: 'blob' });
       const link = document.createElement('a');
@@ -103,7 +113,7 @@ function ComicViewer({ title, coverImage, panels, onReset, onUpdatePanelImage, o
 
   return (
     <>
-      <div className="min-h-screen bg-csr-dark p-4 sm:p-6 md:p-8 font-sans">
+      <div className="min-h-full bg-csr-dark p-4 sm:p-6 md:p-8 font-sans">
         <header className="flex flex-col sm:flex-row justify-between items-center mb-8 text-center sm:text-left max-w-7xl mx-auto">
           <motion.h1 
             initial={{ opacity: 0, x: -50 }}
@@ -117,16 +127,16 @@ function ComicViewer({ title, coverImage, panels, onReset, onUpdatePanelImage, o
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center space-x-2 sm:space-x-4 flex-wrap justify-center"
           >
-            <button onClick={() => setShowCover(!showCover)} disabled={isDownloading} className="flex items-center gap-2 bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-500 transition-colors disabled:opacity-50">
+            <button onClick={() => setShowCover(!showCover)} disabled={isActionDisabled} className="flex items-center gap-2 bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-500 transition-colors disabled:opacity-50">
               <BookOpen className="w-5 h-5"/> {showCover ? 'Hide Cover' : 'Show Cover'}
             </button>
-            <button onClick={handleDownloadPage} disabled={isDownloading} className="flex items-center gap-2 bg-csr-blue text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-wait">
+            <button onClick={handleDownloadPage} disabled={isActionDisabled} className="flex items-center gap-2 bg-csr-blue text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-wait">
               <Download className="w-5 h-5"/> {downloadState === 'page' ? 'Processing...' : 'Download Page'}
             </button>
-            <button onClick={handleDownloadFrames} disabled={isDownloading} className="flex items-center gap-2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-500 transition-colors disabled:opacity-50 disabled:cursor-wait">
+            <button onClick={handleDownloadFrames} disabled={isActionDisabled} className="flex items-center gap-2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-500 transition-colors disabled:opacity-50 disabled:cursor-wait">
               <FileArchive className="w-5 h-5"/> {downloadState === 'frames' ? 'Zipping...' : 'Download Frames'}
             </button>
-            <button onClick={onReset} disabled={isDownloading} className="flex items-center gap-2 bg-csr-gray text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50">
+            <button onClick={onReset} disabled={isActionDisabled} className="flex items-center gap-2 bg-csr-gray text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50">
               <RefreshCw className="w-5 h-5"/> Start Over
             </button>
           </motion.div>
@@ -162,10 +172,8 @@ function ComicViewer({ title, coverImage, panels, onReset, onUpdatePanelImage, o
               <ComicPage 
                 panels={pagePanels} 
                 onEdit={setEditingPanel}
-                onTalk={setChattingCharacter}
                 onAdjustFrame={setAdjustingPanel}
-                onPlayAudio={onPlayAudio}
-                audioState={audioState}
+                onRetry={onRetry}
               />
             </motion.div>
           ))}
@@ -184,12 +192,6 @@ function ComicViewer({ title, coverImage, panels, onReset, onUpdatePanelImage, o
         }}
       />
       
-      <ChatModal
-        character={chattingCharacter}
-        isOpen={!!chattingCharacter}
-        onClose={() => setChattingCharacter(null)}
-      />
-
       <FrameAdjusterModal
         panel={adjustingPanel}
         isOpen={!!adjustingPanel}

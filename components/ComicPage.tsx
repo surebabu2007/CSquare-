@@ -1,18 +1,16 @@
+
 import React from 'react';
 import type { ComicPanelData } from '../types';
-import type { AudioState } from '../App';
 import ComicPanel from './ComicPanel';
 
 interface ComicPageProps {
   panels: ComicPanelData[];
   onEdit: (panel: ComicPanelData) => void;
-  onTalk: (character: string) => void;
   onAdjustFrame: (panel: ComicPanelData) => void;
-  onPlayAudio: (panelId: number, text: string, voiceSuggestion: string) => void;
-  audioState: AudioState;
+  onRetry: (panelId: number) => void;
 }
 
-function ComicPage({ panels, onEdit, onTalk, onAdjustFrame, onPlayAudio, audioState }: ComicPageProps) {
+function ComicPage({ panels, onEdit, onAdjustFrame, onRetry }: ComicPageProps) {
   const panelCount = panels.length;
 
   // Determine layout based on the number of panels for this page
@@ -54,10 +52,8 @@ function ComicPage({ panels, onEdit, onTalk, onAdjustFrame, onPlayAudio, audioSt
           key={panel.id}
           panel={panel}
           onEdit={() => onEdit(panel)}
-          onTalk={onTalk}
           onAdjustFrame={() => onAdjustFrame(panel)}
-          onPlayAudio={onPlayAudio}
-          audioState={audioState}
+          onRetry={onRetry}
           className={panelClasses[index]}
         />
       ))}

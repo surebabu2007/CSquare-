@@ -13,8 +13,11 @@ export interface ComicPanelData {
   dialogue: string;
   character: string | 'Narrator';
   layoutDescription: string;
-  voiceSuggestion: string; // e.g., "Deep, gravelly male voice"
-  transform?: { x: number; y: number; scale: number };
+  transform?: { x: number; y: number; scale: number; rotation?: number };
+  // Properties for graceful generation
+  imageState?: 'loading' | 'loaded' | 'error';
+  imagePrompt?: string; // Stored for retries
+  preferred_model?: 'nano_banana' | 'imagen_4'; // Model hint from story generator
 }
 
 export interface ImagePart {
@@ -29,7 +32,7 @@ export interface RawComicPanel {
   dialogue: string;
   character_name: string;
   panel_layout_description: string;
-  voice_suggestion: string;
+  preferred_model: 'nano_banana' | 'imagen_4';
 }
 
 export interface ComicStoryResponse {
@@ -43,5 +46,5 @@ export interface ComicHistoryItem {
   createdAt: string; // ISO string date
   title: string;
   coverImage: string; // base64
-  panels: ComicPanelData[];
+  panels: Omit<ComicPanelData, 'imageState' | 'imagePrompt' | 'preferred_model'>[];
 }

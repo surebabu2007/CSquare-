@@ -58,3 +58,19 @@ export function BookOpen({ className }: IconProps) {
 export function Trash2({ className }: IconProps) {
   return <i data-lucide="trash-2" className={className}></i>;
 }
+
+export function Hammer({ className }: IconProps) {
+  return <i data-lucide="hammer" className={className}></i>;
+}
+
+export function Anvil({ className }: IconProps) {
+  return <i data-lucide="anvil" className={className}></i>;
+}
+
+export function History({ className }: IconProps) {
+    return <i data-lucide="history" className={className}></i>;
+}
+
+export function PlusCircle({ className }: IconProps) {
+    return <i data-lucide="plus-circle" className={className}></i>;
+}

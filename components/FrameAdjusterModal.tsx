@@ -7,11 +7,12 @@ interface FrameAdjusterModalProps {
   panel: ComicPanelData | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (newTransform: { x: number; y: number; scale: number }) => void;
+  onSave: (newTransform: { x: number; y: number; scale: number; rotation: number }) => void;
 }
 
 function FrameAdjusterModal({ panel, isOpen, onClose, onSave }: FrameAdjusterModalProps) {
   const [scale, setScale] = useState(panel?.transform?.scale ?? 1);
+  const [rotation, setRotation] = useState(panel?.transform?.rotation ?? 0);
   const x = useMotionValue(panel?.transform?.x ?? 0);
   const y = useMotionValue(panel?.transform?.y ?? 0);
   
@@ -20,8 +21,9 @@ function FrameAdjusterModal({ panel, isOpen, onClose, onSave }: FrameAdjusterMod
 
   useEffect(() => {
     if (panel) {
-      const initialTransform = panel.transform ?? { scale: 1, x: 0, y: 0 };
+      const initialTransform = panel.transform ?? { scale: 1, x: 0, y: 0, rotation: 0 };
       setScale(initialTransform.scale);
+      setRotation(initialTransform.rotation ?? 0);
       x.set(initialTransform.x);
       y.set(initialTransform.y);
     }
@@ -31,13 +33,15 @@ function FrameAdjusterModal({ panel, isOpen, onClose, onSave }: FrameAdjusterMod
     if (viewportRef.current) {
         const viewportSize = viewportRef.current.offsetWidth;
         const scaledSize = viewportSize * scale;
-        const overspill = Math.max(0, scaledSize - viewportSize);
+        // Approximate overspill for rotation. This is not perfect but prevents large gaps.
+        const rotationMargin = scaledSize * (Math.sqrt(2) - 1) / 2; 
+        const overspill = Math.max(0, scaledSize - viewportSize) / 2 + rotationMargin;
         
         const newConstraints = {
-            left: -overspill / 2,
-            right: overspill / 2,
-            top: -overspill / 2,
-            bottom: overspill / 2,
+            left: -overspill,
+            right: overspill,
+            top: -overspill,
+            bottom: overspill,
         };
         setDragConstraints(newConstraints);
         
@@ -45,11 +49,18 @@ function FrameAdjusterModal({ panel, isOpen, onClose, onSave }: FrameAdjusterMod
         x.set(Math.max(newConstraints.left, Math.min(x.get(), newConstraints.right)));
         y.set(Math.max(newConstraints.top, Math.min(y.get(), newConstraints.bottom)));
     }
-  }, [scale, x, y]);
+  }, [scale, rotation, x, y]);
 
 
   function handleSave() {
-    onSave({ scale, x: x.get(), y: y.get() });
+    onSave({ scale, rotation, x: x.get(), y: y.get() });
+  }
+  
+  function handleReset() {
+      setScale(1);
+      setRotation(0);
+      x.set(0);
+      y.set(0);
   }
 
   return (
@@ -82,35 +93,56 @@ function FrameAdjusterModal({ panel, isOpen, onClose, onSave }: FrameAdjusterMod
                   src={`data:image/png;base64,${panel.image}`}
                   alt="Adjustable panel"
                   className="absolute top-0 left-0 w-full h-full object-cover"
-                  style={{ scale, x, y }}
+                  style={{ scale, x, y, rotate: rotation }}
                   drag
                   dragConstraints={dragConstraints}
                   dragTransition={{ bounceStiffness: 100, bounceDamping: 20 }}
                 />
               </div>
 
-              <div className="mt-6 max-w-lg mx-auto">
-                <label htmlFor="zoom" className="block text-sm font-medium text-white mb-2">Zoom</label>
-                <input
-                  id="zoom"
-                  type="range"
-                  min="1"
-                  max="3"
-                  step="0.01"
-                  value={scale}
-                  onChange={(e) => setScale(parseFloat(e.target.value))}
-                  className="w-full h-2 bg-csr-dark rounded-lg appearance-none cursor-pointer"
-                />
+              <div className="mt-6 max-w-lg mx-auto space-y-4">
+                <div>
+                  <label htmlFor="zoom" className="block text-sm font-medium text-white mb-2">Zoom ({scale.toFixed(2)}x)</label>
+                  <input
+                    id="zoom"
+                    type="range"
+                    min="1"
+                    max="3"
+                    step="0.01"
+                    value={scale}
+                    onChange={(e) => setScale(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-csr-dark rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="rotation" className="block text-sm font-medium text-white mb-2">Rotation ({rotation.toFixed(0)}°)</label>
+                  <input
+                    id="rotation"
+                    type="range"
+                    min="-45"
+                    max="45"
+                    step="1"
+                    value={rotation}
+                    onChange={(e) => setRotation(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-csr-dark rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
               </div>
 
-              <div className="mt-6 flex justify-end gap-4">
-                <button onClick={onClose} className="bg-csr-light-gray/50 text-white font-bold py-2 px-4 rounded-lg hover:bg-csr-light-gray/80 transition-colors">
-                  Cancel
+              <div className="mt-6 flex justify-between items-center max-w-lg mx-auto">
+                <button onClick={handleReset} className="bg-transparent text-csr-light-gray font-bold py-2 px-4 rounded-lg hover:bg-csr-light-gray/20 transition-colors">
+                  Reset
                 </button>
-                <button onClick={handleSave} className="bg-csr-red text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">
-                  Save Frame
-                </button>
+                <div className="flex gap-4">
+                  <button onClick={onClose} className="bg-csr-light-gray/50 text-white font-bold py-2 px-4 rounded-lg hover:bg-csr-light-gray/80 transition-colors">
+                    Cancel
+                  </button>
+                  <button onClick={handleSave} className="bg-csr-red text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">
+                    Save Frame
+                  </button>
+                </div>
               </div>
+
             </div>
           </motion.div>
         </motion.div>
